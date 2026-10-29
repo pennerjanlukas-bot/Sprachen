@@ -32,6 +32,17 @@ export function itemsOf(mod) {
   return items;
 }
 
+const RANK = { new: 0, learning: 1, known: 2, mastered: 3 };
+
+// Eine Karte gilt erst als gelernt, wenn beide Richtungen sitzen.
+export function cardStatus(card) {
+  const f = status(`${card.id}|f`);
+  if (!state.settings.reverse) return f;
+  const r = status(`${card.id}|r`);
+  if (f === 'new' && r === 'new') return 'new';
+  return RANK[f] <= RANK[r] ? (f === 'new' ? 'learning' : f) : (r === 'new' ? 'learning' : r);
+}
+
 export function status(key) {
   const m = state.items[key];
   if (!m || m.state === 'new') return 'new';
@@ -55,6 +66,7 @@ function maxInterval(now) {
 export function grade(key, g, now = Date.now()) {
   const m = (state.items[key] ||= { state: 'new', reps: 0, lapses: 0 });
   const wasNew = m.state === 'new';
+  const firstTime = wasNew || m.state === 'learning';
   const next = review(m.s ? m : null, g, now);
   m.s = next.s;
   m.d = next.d;
@@ -82,7 +94,7 @@ export function grade(key, g, now = Date.now()) {
   ivl = Math.min(Math.max(1, ivl), maxInterval(now));
   m.ivl = ivl;
   m.due = startOfDay(now) + ivl * DAY;
-  return { wasNew, requeue: false };
+  return { wasNew, requeue: false, graduated: firstTime };
 }
 
 export function recordConfusion(key, chosen) {
@@ -100,7 +112,7 @@ function newCandidates(mod) {
     if (it.dir === 'f') forward.push(it);
     else if (state.settings.reverse) {
       const fm = state.items[`${it.card.id}|f`];
-      if (fm?.state === 'review' && fm.s >= 3) reverse.push(it);
+      if (fm?.state === 'review') reverse.push(it);
     }
   }
   return { forward, reverse };
@@ -112,7 +124,7 @@ export function overview(mod, now = Date.now()) {
   const counts = { new: 0, learning: 0, known: 0, mastered: 0 };
   for (const it of itemsOf(mod)) {
     const m = state.items[it.key];
-    if (it.dir === 'f') counts[status(it.key)]++;
+    if (it.dir === 'f') counts[cardStatus(it.card)]++;
     if (!m || m.state === 'new') continue;
     if (m.due <= end) due++;
     else if (m.due <= end + DAY) tomorrow++;
@@ -120,7 +132,7 @@ export function overview(mod, now = Date.now()) {
   }
   const { forward, reverse } = newCandidates(mod);
   const newLeft = Math.max(0, state.settings.newPerDay - dayStats(mod.id).new);
-  const newToday = Math.min(newLeft, forward.length + reverse.length);
+  const newToday = Math.min(newLeft, forward.length) + reverse.length;
   return { due, tomorrow, week, newToday, counts, total: counts.new + counts.learning + counts.known + counts.mastered };
 }
 
@@ -146,7 +158,8 @@ export function buildLearnSession(mod, limit = 60, now = Date.now()) {
     .sort((a, b) => state.items[a.key].due - state.items[b.key].due);
   const { forward, reverse } = newCandidates(mod);
   const newLeft = Math.max(0, state.settings.newPerDay - dayStats(mod.id).new);
-  const news = [...shuffle(reverse), ...roundRobin(forward)].slice(0, newLeft);
+  // Rückrichtungen bereits gelernter Karten zählen nicht zum Tageslimit für neue Karten.
+  const news = [...shuffle(reverse), ...roundRobin(forward).slice(0, newLeft)];
 
   // Nach jeweils vier Wiederholungen eine neue Karte einstreuen.
   const queue = [];

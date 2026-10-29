@@ -15,7 +15,7 @@ Erlernen und Meistern verschiedener Sprachen und ihrer Strukturen – als Web-Ap
 - **Prüfungsnah**: 5 Antwortmöglichkeiten; Ablenker werden so gewählt, dass sie der richtigen Antwort ähneln
   (gleiche Kategorie, Länge, Endung). Früher verwechselte Antworten tauchen gezielt wieder als Ablenker auf.
 - **Bewertung automatisch**: falsch / „Nur geraten“ → kommt sofort wieder; richtig aber langsam → kürzeres Intervall.
-- **Beide Richtungen**: Begriff → Bedeutung, später auch Bedeutung → Begriff.
+- **Beide Richtungen**: Begriff → Bedeutung und Bedeutung → Begriff, schon in derselben Einheit. Eine Karte gilt erst als gelernt, wenn beide Richtungen sitzen.
 - **Testdatum**: Intervalle werden gekappt, damit jede Karte vor dem Test noch einmal drankommt.
 - **Prüfungssimulation** mit Zeitlimit und **Schwachstellen-Training**.
 

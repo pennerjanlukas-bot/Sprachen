@@ -1,6 +1,6 @@
 import { loadModules, findModule, CATEGORY_LABELS } from './data.js';
 import { state, save, streak, dayStats, replaceState, resetProgress, requestPersistence } from './store.js';
-import { overview, buildLearnSession, buildExamSession, weakItems, status, daysUntilExam } from './srs.js';
+import { overview, buildLearnSession, buildExamSession, weakItems, cardStatus, daysUntilExam } from './srs.js';
 import { runQuiz } from './quiz.js';
 import { esc, plural } from './ui.js';
 
@@ -175,7 +175,7 @@ function renderCards(mod) {
     const cards = mod.cards.filter(c => (!cat || c.category === cat) &&
       (!q || `${c.term} ${c.answer} ${(c.alt || []).join(' ')}`.toLowerCase().includes(q)));
     list.innerHTML = cards.slice(0, 300).map(c => {
-      const st = status(`${c.id}|f`);
+      const st = cardStatus(c);
       return `<li><div><strong>${esc(c.term)}</strong><br>${esc(c.answer)}${c.alt?.length ? `<span class="muted"> · ${esc(c.alt.join(', '))}</span>` : ''}${c.note ? `<br><span class="muted small">${esc(c.note)}</span>` : ''}</div>
         <span class="tag tag-${st}">${labels[st]}</span></li>`;
     }).join('') + (cards.length > 300 ? `<li class="muted">… und ${cards.length - 300} weitere</li>` : '');
@@ -210,7 +210,7 @@ function renderSettings() {
         <label>Ziel-Erinnerungsquote<select name="retention">
           ${[0.85, 0.9, 0.93, 0.95].map(v => `<option value="${v}" ${s.retention === v ? 'selected' : ''}>${Math.round(v * 100)} %${v === 0.9 ? ' (empfohlen)' : v > 0.9 ? ' (mehr Wiederholungen)' : ' (weniger Wiederholungen)'}</option>`).join('')}
         </select></label>
-        <label class="check"><input type="checkbox" name="reverse" ${s.reverse ? 'checked' : ''}> Auch umgekehrt abfragen (Bedeutung → Begriff)</label>
+        <label class="check"><input type="checkbox" name="reverse" ${s.reverse ? 'checked' : ''}> In beide Richtungen abfragen (auch Bedeutung → Begriff)</label>
         <label class="check"><input type="checkbox" name="autoAdvance" ${s.autoAdvance ? 'checked' : ''}> Bei richtiger Antwort automatisch weiter</label>
       </section>
       <section class="card form">

@@ -13,7 +13,12 @@ LETTER = re.compile(r'^[A-Z]$')
 
 
 def clean(s):
+    # Zeilenumbruch zwischen zwei Varianten („to emphasise“ / „to emphasize“) als Alternative behandeln.
+    lines = [l.strip() for l in (s or '').split('\n') if l.strip()]
+    if len(lines) > 1 and all(l.startswith('to ') for l in lines):
+        s = ' / '.join(lines)
     s = re.sub(r'\s+', ' ', s or '').strip()
+    s = re.sub(r'(\w)\(', r'\1 (', s)
     s = re.sub(r'\(\s+', '(', s)
     s = re.sub(r'\s+\)', ')', s)
     return s.replace(' ,', ',').replace('´', "'").replace('’', "'")

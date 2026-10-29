@@ -5,6 +5,10 @@ import { CATEGORY_LABELS } from './data.js';
 import { esc } from './ui.js';
 
 const LETTERS = 'ABCDEFGH';
+const REVERSE_PROMPTS = {
+  synonym: 'Welches Wort hat die gleiche Bedeutung?',
+  proverb: 'Welches englische Sprichwort entspricht?',
+};
 const FORWARD_PROMPTS = {
   synonym: 'Welches Wort hat die gleiche Bedeutung?',
   idiom: 'Was bedeutet diese Redewendung?',
@@ -41,7 +45,7 @@ export function runQuiz(root, { mod, mode, items, onDone }) {
     const { card, dir } = current;
     const deck = deckById.get(card.deck);
     const prompt = dir === 'f' ? deck?.prompt || FORWARD_PROMPTS[card.category] || FORWARD_PROMPTS.word
-      : 'Welcher Ausdruck passt zu dieser Bedeutung?';
+      : REVERSE_PROMPTS[card.category] || 'Welcher Ausdruck passt zu dieser Bedeutung?';
     const p = progress();
     root.innerHTML = `
       <div class="quiz">
@@ -141,7 +145,15 @@ export function runQuiz(root, { mod, mode, items, onDone }) {
     if (mode === 'learn') {
       const g = !ok || guessed ? 1 : ms > slowMs ? 2 : 3;
       const res = grade(current.key, g);
-      if (res.wasNew) dayStats(mod.id).new++;
+      if (res.wasNew && current.dir === 'f') dayStats(mod.id).new++;
+      // Sitzt die Hinrichtung, kommt die Rückrichtung noch in derselben Einheit.
+      if (res.graduated && current.dir === 'f' && state.settings.reverse) {
+        const key = `${current.card.id}|r`;
+        if (!state.items[key] && !queue.some(it => it.key === key)) {
+          queue.splice(Math.min(queue.length, 4 + Math.floor(Math.random() * 4)), 0,
+            { key, card: current.card, dir: 'r' });
+        }
+      }
       if (res.requeue) requeue();
     } else if (mode === 'weak') {
       if (!ok || guessed) {
