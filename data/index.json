@@ -2,13 +2,13 @@
   "modules": [
     {
       "id": "dlr",
-      "title": "DLR-Test",
-      "subtitle": "Synonyme, Phrasen & Redewendungen",
+      "title": "DLR-Test Englisch",
+      "subtitle": "Synonyme, Phrasen & Sprichwörter",
       "priority": true,
       "decks": [
-        "data/dlr/beispiel-synonyme.json",
-        "data/dlr/beispiel-phrasen.json",
-        "data/dlr/beispiel-redewendungen.json"
+        "data/dlr/synonyme.json",
+        "data/dlr/phrasen.json",
+        "data/dlr/sprichwoerter.json"
       ]
     }
   ]

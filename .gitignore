@@ -1,0 +1,2 @@
+# Kartendaten aus lizenzierten Kursunterlagen nicht veröffentlichen (mit tools/convert_sp_pdf.py erzeugen)
+data/dlr/*.json
