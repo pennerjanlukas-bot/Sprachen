@@ -5,11 +5,7 @@
       "title": "DLR-Test Englisch",
       "subtitle": "Synonyme, Phrasen & Sprichwörter",
       "priority": true,
-      "decks": [
-        "data/dlr/synonyme.json",
-        "data/dlr/phrasen.json",
-        "data/dlr/sprichwoerter.json"
-      ]
+      "decks": []
     }
   ]
 }

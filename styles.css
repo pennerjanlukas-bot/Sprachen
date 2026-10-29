@@ -201,3 +201,5 @@ p { margin: 0 0 8px; }
 }
 .form .btn { margin-top: 6px; }
 .form label.btn { flex-direction: column; margin-bottom: 0; }
+.grow { flex: 1; min-width: 0; }
+.btn.small-btn { min-height: 40px; padding: 6px 12px; font-size: .9rem; color: var(--bad); }

@@ -85,3 +85,18 @@ export function streak() {
 export function requestPersistence() {
   navigator.storage?.persist?.().catch(() => {});
 }
+
+// Importierte Kartenpakete liegen getrennt vom Fortschritt, damit sie nie veröffentlicht werden müssen.
+const PACKS_KEY = 'sprachtrainer.packs';
+
+export function loadPacks() {
+  try {
+    return JSON.parse(localStorage.getItem(PACKS_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+export function savePacks(packs) {
+  localStorage.setItem(PACKS_KEY, JSON.stringify(packs));
+}

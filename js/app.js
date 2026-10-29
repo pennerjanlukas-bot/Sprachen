@@ -1,5 +1,5 @@
-import { loadModules, findModule, CATEGORY_LABELS } from './data.js';
-import { state, save, streak, dayStats, replaceState, resetProgress, requestPersistence } from './store.js';
+import { loadModules, reloadModules, findModule, parsePack, CATEGORY_LABELS } from './data.js';
+import { state, save, streak, dayStats, replaceState, resetProgress, requestPersistence, loadPacks, savePacks } from './store.js';
 import { overview, buildLearnSession, buildExamSession, weakItems, cardStatus, daysUntilExam } from './srs.js';
 import { runQuiz } from './quiz.js';
 import { esc, plural } from './ui.js';
@@ -26,6 +26,53 @@ function route() {
   }
 }
 
+// Ohne accept-Filter, weil iOS JSON-Dateien sonst teils ausgraut; der Inhalt wird beim Import geprüft.
+const importButton = (label, cls = 'secondary') =>
+  `<label class="btn ${cls}">${label}<input type="file" hidden data-import></label>`;
+
+async function importFile(file) {
+  let data;
+  try {
+    data = JSON.parse(await file.text());
+  } catch {
+    alert('Die Datei konnte nicht gelesen werden. Bitte die .json-Kartendatei auswählen.');
+    return;
+  }
+  try {
+    if (data.type === 'sprachtrainer-pack') {
+      const pack = parsePack(data);
+      const packs = loadPacks();
+      packs[pack.module.id] = pack;
+      savePacks(packs);
+      requestPersistence();
+      loadedModules = await reloadModules();
+      const n = pack.decks.reduce((sum, d) => sum + d.cards.length, 0);
+      alert(`${n} Karten importiert: ${pack.decks.map(d => d.title).join(', ')}.`);
+      const target = `#/m/${pack.module.id}`;
+      if (location.hash === target) route(); else go(target);
+    } else if (data.items && data.settings) {
+      if (!confirm('Backup laden? Dein aktueller Fortschritt wird dadurch ersetzt.')) return;
+      const { packs, ...progress } = data;
+      if (packs) savePacks(packs);
+      replaceState(progress);
+      loadedModules = await reloadModules();
+      alert('Backup geladen.');
+      route();
+    } else {
+      throw new Error('Unbekanntes Dateiformat. Erwartet wird eine Kartendatei oder ein Backup.');
+    }
+  } catch (err) {
+    alert(err.name === 'QuotaExceededError' ? 'Nicht genug Speicherplatz im Browser.' : err.message);
+  }
+}
+
+root.addEventListener('change', e => {
+  if (!e.target.matches('[data-import]')) return;
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (file) importFile(file);
+});
+
 function header(title, back) {
   return `<header class="top">
     ${back ? `<a class="icon-btn" href="${back}" aria-label="Zurück">‹</a>` : '<span class="icon-spacer"></span>'}
@@ -48,19 +95,35 @@ function renderHome(modules = loadedModules) {
       ${st ? `<p class="muted center">🔥 ${plural(st, 'Tag', 'Tage')} in Folge gelernt</p>` : ''}
       ${modules.map(m => {
         const o = overview(m);
+        const stats = m.cards.length
+          ? `<strong>${o.due}</strong> fällig · <strong>${o.newToday}</strong> neu · ${o.counts.known + o.counts.mastered}/${o.total} gelernt`
+          : 'Noch keine Karten – Kartendatei importieren';
         return `<a class="card module" href="#/m/${esc(m.id)}">
           <div class="module-head">
             <div><h2>${esc(m.title)}</h2><p class="muted">${esc(m.subtitle || '')}</p></div>
             ${m.priority ? '<span class="tag tag-prio">Priorität</span>' : ''}
           </div>
-          <p class="module-stats"><strong>${o.due}</strong> fällig · <strong>${o.newToday}</strong> neu · ${o.counts.known + o.counts.mastered}/${o.total} gelernt</p>
+          <p class="module-stats">${stats}</p>
         </a>`;
       }).join('')}
       <div class="card placeholder"><h2>Weitere Sprachen</h2><p class="muted">Kommen später dazu – mit eigenen Schwerpunkten.</p></div>
     </div>`;
 }
 
+function renderEmptyModule(mod) {
+  root.innerHTML = `${header(mod.title, '#/')}
+    <div class="page">
+      <section class="card">
+        <h2>Noch keine Karten</h2>
+        <p class="muted">Importiere deine Kartendatei (.json). Die Karten werden nur auf diesem Gerät gespeichert.</p>
+        <p class="muted small">So geht’s: Datei in der Dateien-App speichern (z. B. aus iCloud Drive oder per AirDrop), dann hier auswählen.</p>
+        ${importButton('Kartendatei auswählen', 'primary')}
+      </section>
+    </div>`;
+}
+
 function renderModule(mod) {
+  if (!mod.cards.length) return renderEmptyModule(mod);
   const o = overview(mod);
   const weak = weakItems(mod).length;
   const pct = n => (o.total ? (n / o.total) * 100 : 0);
@@ -214,11 +277,21 @@ function renderSettings() {
         <label class="check"><input type="checkbox" name="autoAdvance" ${s.autoAdvance ? 'checked' : ''}> Bei richtiger Antwort automatisch weiter</label>
       </section>
       <section class="card form">
+        <h3>Kartensätze</h3>
+        ${Object.values(loadPacks()).map(p => `<div class="deck">
+          <span class="grow"><strong>${esc(p.module.title)}</strong><br>
+            <span class="muted small">${p.decks.map(d => `${esc(d.title)} (${d.cards.length})`).join(' · ')}</span></span>
+          <button class="btn ghost small-btn" data-remove-pack="${esc(p.module.id)}">Entfernen</button>
+        </div>`).join('') || '<p class="muted small">Noch keine Kartendatei importiert.</p>'}
+        <p class="muted small">Importierte Karten bleiben nur auf diesem Gerät. Eine neue Version derselben Datei ersetzt die alte, dein Fortschritt bleibt erhalten.</p>
+        ${importButton('Kartendatei importieren')}
+      </section>
+      <section class="card form">
         <h3>Daten</h3>
-        <p class="muted small">Dein Fortschritt liegt nur auf diesem Gerät. Tipp: App zum Home-Bildschirm hinzufügen und ab und zu ein Backup speichern.</p>
+        <p class="muted small">Fortschritt und Karten liegen nur auf diesem Gerät. Tipp: App zum Home-Bildschirm hinzufügen und ab und zu ein Backup speichern – es enthält auch die Karten.</p>
         <div class="row">
           <button class="btn secondary" data-act="export">Backup speichern</button>
-          <label class="btn secondary">Backup laden<input type="file" accept="application/json,.json" hidden data-act="import"></label>
+          ${importButton('Backup laden')}
         </div>
         <button class="btn danger" data-act="reset">Fortschritt zurücksetzen</button>
       </section>
@@ -237,28 +310,21 @@ function renderSettings() {
     save();
   }));
   root.querySelector('[data-act="export"]').addEventListener('click', () => {
-    const blob = new Blob([JSON.stringify(state)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ ...state, packs: loadPacks() })], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `sprachtrainer-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });
-  root.querySelector('[data-act="import"]').addEventListener('change', async e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    try {
-      const data = JSON.parse(await file.text());
-      if (!data.items || !data.settings) throw new Error('Kein gültiges Backup');
-      if (confirm('Aktuellen Fortschritt durch das Backup ersetzen?')) {
-        replaceState(data);
-        alert('Backup geladen.');
-        renderSettings();
-      }
-    } catch (err) {
-      alert(`Backup konnte nicht geladen werden: ${err.message}`);
-    }
-  });
+  root.querySelectorAll('[data-remove-pack]').forEach(btn => btn.addEventListener('click', async () => {
+    if (!confirm('Kartensatz von diesem Gerät entfernen? Dein Lernfortschritt bleibt gespeichert.')) return;
+    const packs = loadPacks();
+    delete packs[btn.dataset.removePack];
+    savePacks(packs);
+    loadedModules = await reloadModules();
+    renderSettings();
+  }));
   root.querySelector('[data-act="reset"]').addEventListener('click', () => {
     if (confirm('Wirklich den gesamten Lernfortschritt löschen?')) {
       resetProgress();

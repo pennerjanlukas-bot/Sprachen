@@ -1,6 +1,7 @@
-"""Wandelt die S&P-Vorbereitungs-PDF (Synonyms / Sprichwörter / Phrases) in Kartensätze für data/dlr/ um.
+"""Wandelt die S&P-Vorbereitungs-PDF (Synonyms / Sprichwörter / Phrases) in eine Kartendatei um,
+die in der App unter Einstellungen → Kartensätze importiert wird.
 
-Aufruf: python3 tools/convert_sp_pdf.py <datei.pdf> data/dlr
+Aufruf: python3 tools/convert_sp_pdf.py <datei.pdf> <kartendatei.json>
 Benötigt: pdfplumber
 """
 import json
@@ -104,19 +105,25 @@ def convert(path):
     return synonyms, phrases, proverbs
 
 
-def main(pdf_path, out_dir):
+def main(pdf_path, out_path):
     synonyms, phrases, proverbs = convert(pdf_path)
     decks = [
         ('synonyme', 'Synonyme', 'synonym', 'Welches Wort hat die gleiche Bedeutung?', synonyms),
         ('phrasen', 'Phrasen & Redewendungen', 'phrase', 'Was bedeutet dieser Ausdruck?', phrases),
         ('sprichwoerter', 'Sprichwörter', 'proverb', 'Welches deutsche Sprichwort entspricht?', proverbs),
     ]
-    for deck_id, title, category, prompt, cards in decks:
-        deck = {'id': f'dlr-{deck_id}', 'title': title, 'category': category, 'prompt': prompt,
-                'source': 'S&P Training, Englisch v. 3.2', 'cards': list(cards.values())}
-        with open(f'{out_dir}/{deck_id}.json', 'w', encoding='utf-8') as f:
-            json.dump(deck, f, ensure_ascii=False, indent=1)
-        print(f'{deck_id}: {len(cards)} Karten')
+    pack = {
+        'type': 'sprachtrainer-pack',
+        'module': {'id': 'dlr', 'title': 'DLR-Test Englisch', 'subtitle': 'Synonyme, Phrasen & Sprichwörter',
+                   'priority': True},
+        'decks': [{'id': f'dlr-{deck_id}', 'title': title, 'category': category, 'prompt': prompt,
+                   'source': 'S&P Training, Englisch v. 3.2', 'cards': list(cards.values())}
+                  for deck_id, title, category, prompt, cards in decks],
+    }
+    with open(out_path, 'w', encoding='utf-8') as f:
+        json.dump(pack, f, ensure_ascii=False, separators=(',', ':'))
+    for deck in pack['decks']:
+        print(f"{deck['title']}: {len(deck['cards'])} Karten")
 
 
 if __name__ == '__main__':

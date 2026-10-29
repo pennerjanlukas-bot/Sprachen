@@ -31,29 +31,51 @@ python3 -m http.server 8000
 Auf dem iPhone/iPad: Seite in Safari öffnen → Teilen → „Zum Home-Bildschirm“. Dann läuft sie wie eine App,
 auch offline. Der Fortschritt liegt lokal auf dem Gerät (Backup unter Einstellungen).
 
+## Karten importieren
+
+Kartendaten aus lizenzierten Kursunterlagen liegen **nicht** im Repository. Sie werden als Kartendatei
+erzeugt und in der App unter *Einstellungen → Kartensätze* importiert; gespeichert werden sie nur auf dem Gerät.
+
+```sh
+pip install pdfplumber
+python3 tools/convert_sp_pdf.py Synonyme_etc.pdf dlr-karten.json
+```
+
+Eine neue Version derselben Kartendatei ersetzt die alte; der Lernfortschritt bleibt erhalten, weil er an der
+Karten-id hängt. Das Backup (*Einstellungen → Backup speichern*) enthält Fortschritt **und** Karten.
+
 ## Datenformat
 
-`data/index.json` listet die Module und ihre Kartensätze. Ein Kartensatz:
+Eine Kartendatei:
 
 ```json
 {
-  "id": "dlr-synonyme",
-  "title": "Synonyme",
-  "category": "synonym",
-  "cards": [
+  "type": "sprachtrainer-pack",
+  "module": { "id": "dlr", "title": "DLR-Test Englisch", "subtitle": "…", "priority": true },
+  "decks": [
     {
-      "term": "reluctant",
-      "answer": "unwilling",
-      "alt": ["hesitant"],
-      "distractors": ["eager", "willing", "relieved", "reliable"],
-      "example": "She was reluctant to admit her mistake.",
-      "note": ""
+      "id": "dlr-synonyme",
+      "title": "Synonyme",
+      "category": "synonym",
+      "prompt": "Welches Wort hat die gleiche Bedeutung?",
+      "cards": [
+        {
+          "term": "reluctant",
+          "answer": "unwilling",
+          "alt": ["hesitant"],
+          "distractors": ["eager", "willing"],
+          "example": "She was reluctant to admit her mistake.",
+          "note": "Deutsch: widerwillig"
+        }
+      ]
     }
   ]
 }
 ```
 
-- `category`: `synonym`, `phrase`, `idiom` oder `word`
+- `category`: `synonym`, `phrase`, `idiom`, `proverb` oder `word`
 - `alt`: weitere richtige Bedeutungen (werden nie als falsche Antwort angezeigt)
 - `distractors` (optional): falsche Antworten aus den Unterlagen; fehlen sie, wählt die App ähnliche Antworten anderer Karten
 - `id` (optional): wird sonst aus `term` gebildet – der Lernfortschritt hängt an der id
+
+Fest eingebaute (frei verwendbare) Kartensätze können zusätzlich in `data/index.json` unter `decks` eingetragen werden.
