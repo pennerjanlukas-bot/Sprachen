@@ -176,7 +176,7 @@ function renderCards(mod) {
       (!q || `${c.term} ${c.answer} ${(c.alt || []).join(' ')}`.toLowerCase().includes(q)));
     list.innerHTML = cards.slice(0, 300).map(c => {
       const st = status(`${c.id}|f`);
-      return `<li><div><strong>${esc(c.term)}</strong><br>${esc(c.answer)}${c.alt?.length ? `<span class="muted"> · ${esc(c.alt.join(', '))}</span>` : ''}</div>
+      return `<li><div><strong>${esc(c.term)}</strong><br>${esc(c.answer)}${c.alt?.length ? `<span class="muted"> · ${esc(c.alt.join(', '))}</span>` : ''}${c.note ? `<br><span class="muted small">${esc(c.note)}</span>` : ''}</div>
         <span class="tag tag-${st}">${labels[st]}</span></li>`;
     }).join('') + (cards.length > 300 ? `<li class="muted">… und ${cards.length - 300} weitere</li>` : '');
   };

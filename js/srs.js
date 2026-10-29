@@ -194,6 +194,21 @@ function similarity(a, b) {
   return sc;
 }
 
+// Deutsche Übersetzung als Wortmenge, um Bedeutungsgleiche Karten zu erkennen.
+const germanWords = c => new Set((c.note || '').replace(/^Deutsch:/, '').toLowerCase()
+  .split(/[^a-zäöüß]+/).filter(w => w.length > 3 && !['etwas', 'jemanden', 'sich'].includes(w)));
+
+const meanings = c => new Set([c.term, c.answer, ...(c.alt || [])].map(norm));
+
+// Karten mit überschneidender Bedeutung dürfen nicht als „falsche“ Antwort erscheinen.
+function overlaps(a, b) {
+  const ma = meanings(a), mb = meanings(b);
+  for (const m of ma) if (mb.has(m)) return true;
+  const ga = germanWords(a);
+  for (const w of germanWords(b)) if (ga.has(w)) return true;
+  return false;
+}
+
 export function buildOptions(item, mod, n = state.settings.options) {
   const { card, dir } = item;
   const field = dir === 'f' ? 'answer' : 'term';
@@ -217,7 +232,7 @@ export function buildOptions(item, mod, n = state.settings.options) {
 
   // 3. Ähnliche Antworten anderer Karten, bevorzugt aus derselben Kategorie
   const pool = mod.cards
-    .filter(c => c !== card && norm(c.term) !== norm(card.term) && !(c.alt || []).some(a => norm(a) === norm(correct)))
+    .filter(c => c !== card && !overlaps(card, c))
     .map(c => ({
       text: c[field],
       score: (c.category === card.category ? 3 : 0) + similarity(correct, c[field]) + Math.random() * 1.5,

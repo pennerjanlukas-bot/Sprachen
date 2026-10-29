@@ -5,6 +5,7 @@ export const CATEGORY_LABELS = {
   synonym: 'Synonym',
   phrase: 'Phrase',
   idiom: 'Redewendung',
+  proverb: 'Sprichwort',
   word: 'Vokabel',
 };
 
