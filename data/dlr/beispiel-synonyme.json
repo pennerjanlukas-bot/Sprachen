@@ -1,0 +1,79 @@
+{
+ "id": "beispiel-synonyme",
+ "title": "Beispiel: Synonyme",
+ "category": "synonym",
+ "cards": [
+  {
+   "term": "abandon",
+   "answer": "give up"
+  },
+  {
+   "term": "accurate",
+   "answer": "precise"
+  },
+  {
+   "term": "adequate",
+   "answer": "sufficient"
+  },
+  {
+   "term": "ambiguous",
+   "answer": "unclear"
+  },
+  {
+   "term": "brief",
+   "answer": "short"
+  },
+  {
+   "term": "cautious",
+   "answer": "careful"
+  },
+  {
+   "term": "commence",
+   "answer": "begin"
+  },
+  {
+   "term": "conceal",
+   "answer": "hide"
+  },
+  {
+   "term": "diminish",
+   "answer": "decrease"
+  },
+  {
+   "term": "eager",
+   "answer": "keen"
+  },
+  {
+   "term": "enormous",
+   "answer": "huge"
+  },
+  {
+   "term": "frequent",
+   "answer": "common"
+  },
+  {
+   "term": "hazardous",
+   "answer": "dangerous"
+  },
+  {
+   "term": "obtain",
+   "answer": "acquire"
+  },
+  {
+   "term": "reluctant",
+   "answer": "unwilling"
+  },
+  {
+   "term": "vital",
+   "answer": "essential"
+  },
+  {
+   "term": "swift",
+   "answer": "fast"
+  },
+  {
+   "term": "tedious",
+   "answer": "boring"
+  }
+ ]
+}

@@ -1,2 +1,59 @@
 # Sprachen
-Erlernen und meistern von verschiedenen Sprachen und dessen Strukturen 
+
+Erlernen und Meistern verschiedener Sprachen und ihrer Strukturen – als Web-App fürs Handy/iPad (später auch PC).
+
+## Module
+
+| Modul | Inhalt | Status |
+|---|---|---|
+| **DLR-Test** | Synonyme, Phrasen, Redewendungen – Multiple Choice wie im Test | in Arbeit (Priorität) |
+| weitere Sprachen | eigene Schwerpunkte | geplant |
+
+## Lernprinzip
+
+- **Spaced Repetition mit FSRS-5** (`js/fsrs.js`): jede Karte kommt kurz vor dem Vergessen wieder.
+- **Prüfungsnah**: 5 Antwortmöglichkeiten; Ablenker werden so gewählt, dass sie der richtigen Antwort ähneln
+  (gleiche Kategorie, Länge, Endung). Früher verwechselte Antworten tauchen gezielt wieder als Ablenker auf.
+- **Bewertung automatisch**: falsch / „Nur geraten“ → kommt sofort wieder; richtig aber langsam → kürzeres Intervall.
+- **Beide Richtungen**: Begriff → Bedeutung, später auch Bedeutung → Begriff.
+- **Testdatum**: Intervalle werden gekappt, damit jede Karte vor dem Test noch einmal drankommt.
+- **Prüfungssimulation** mit Zeitlimit und **Schwachstellen-Training**.
+
+## Starten
+
+Statische Seite, kein Build nötig:
+
+```sh
+python3 -m http.server 8000
+# http://localhost:8000
+```
+
+Auf dem iPhone/iPad: Seite in Safari öffnen → Teilen → „Zum Home-Bildschirm“. Dann läuft sie wie eine App,
+auch offline. Der Fortschritt liegt lokal auf dem Gerät (Backup unter Einstellungen).
+
+## Datenformat
+
+`data/index.json` listet die Module und ihre Kartensätze. Ein Kartensatz:
+
+```json
+{
+  "id": "dlr-synonyme",
+  "title": "Synonyme",
+  "category": "synonym",
+  "cards": [
+    {
+      "term": "reluctant",
+      "answer": "unwilling",
+      "alt": ["hesitant"],
+      "distractors": ["eager", "willing", "relieved", "reliable"],
+      "example": "She was reluctant to admit her mistake.",
+      "note": ""
+    }
+  ]
+}
+```
+
+- `category`: `synonym`, `phrase`, `idiom` oder `word`
+- `alt`: weitere richtige Bedeutungen (werden nie als falsche Antwort angezeigt)
+- `distractors` (optional): falsche Antworten aus den Unterlagen; fehlen sie, wählt die App ähnliche Antworten anderer Karten
+- `id` (optional): wird sonst aus `term` gebildet – der Lernfortschritt hängt an der id

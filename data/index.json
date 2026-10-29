@@ -1,0 +1,15 @@
+{
+  "modules": [
+    {
+      "id": "dlr",
+      "title": "DLR-Test",
+      "subtitle": "Synonyme, Phrasen & Redewendungen",
+      "priority": true,
+      "decks": [
+        "data/dlr/beispiel-synonyme.json",
+        "data/dlr/beispiel-phrasen.json",
+        "data/dlr/beispiel-redewendungen.json"
+      ]
+    }
+  ]
+}
