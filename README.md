@@ -18,6 +18,11 @@ Erlernen und Meistern verschiedener Sprachen und ihrer Strukturen – als Web-Ap
 - **Beide Richtungen**: Begriff → Bedeutung und Bedeutung → Begriff, schon in derselben Einheit. Eine Karte gilt erst als gelernt, wenn beide Richtungen sitzen.
 - **Testdatum**: Intervalle werden gekappt, damit jede Karte vor dem Test noch einmal drankommt.
 - **Prüfungssimulation** mit Zeitlimit und **Schwachstellen-Training**.
+- **Endlos lernen** bis „Fertig“: fällige Karten zuerst, dann abwechselnd die am ehesten vergessenen und neue Karten.
+- **Nochmal üben**: die heute gelernten Karten beliebig oft wiederholen. Richtige Antworten am selben Tag
+  verlängern die Abstände nicht ein zweites Mal, Fehler fließen aber in die Planung ein.
+- **5 Lager** (Kritisch, Unsicher, Solide, Sicher, Perfekt) nach Gedächtnisstabilität; jedes Lager lässt sich gezielt trainieren.
+- **Statistik**: Antworten, Trefferquote und Lernzeit pro Tag, Verlauf der letzten 14 Tage.
 
 ## Starten
 

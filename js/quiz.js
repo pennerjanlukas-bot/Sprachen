@@ -1,6 +1,6 @@
-// Ablauf einer Übungseinheit: Lernen (Spaced Repetition), Schwachstellen oder Prüfungssimulation.
+// Ablauf einer Übungseinheit: Lernen (Spaced Repetition), Endlos, Wiederholen, Lager oder Prüfungssimulation.
 import { state, save, dayStats } from './store.js';
-import { grade, recordConfusion, buildOptions, ownerOf } from './srs.js';
+import { grade, recordConfusion, buildOptions, ownerOf, startOfDay } from './srs.js';
 import { CATEGORY_LABELS } from './data.js';
 import { esc } from './ui.js';
 
@@ -15,8 +15,10 @@ const FORWARD_PROMPTS = {
   phrase: 'Was bedeutet diese Phrase?',
   word: 'Was bedeutet dieser Begriff?',
 };
+const RECENT = 15;
 
-export function runQuiz(root, { mod, mode, items, onDone }) {
+// refill (optional): liefert neue Fragen nach, sobald die Warteschlange leer wird (Endlos-Modus).
+export function runQuiz(root, { mod, mode, items, refill, onDone }) {
   const s = state.settings;
   const timerSec = mode === 'exam' ? s.examTimer : s.timer;
   const slowMs = timerSec ? timerSec * 700 : 12000;
@@ -30,14 +32,35 @@ export function runQuiz(root, { mod, mode, items, onDone }) {
   let pending = null;
   let timerId = null;
   let advanceId = null;
+  const recent = [];
 
   function progress() {
     if (total) return { done: stats.answered, all: total };
     return { done: stats.answered, all: stats.answered + queue.length + (pending ? 0 : 1) };
   }
 
+  function topBar() {
+    if (refill) {
+      const pct = stats.answered ? ` · ${Math.round(stats.correct / stats.answered * 100)} % richtig` : '';
+      return `<header class="quiz-top">
+          <button class="btn primary small-btn done-btn" data-act="quit">Fertig</button>
+          <span class="muted small grow center">${stats.answered} beantwortet${pct}</span>
+        </header>`;
+    }
+    const p = progress();
+    return `<header class="quiz-top">
+          <button class="icon-btn" data-act="quit" aria-label="Beenden">✕</button>
+          <div class="bar"><div style="width:${Math.round(p.done / Math.max(1, p.all) * 100)}%"></div></div>
+          <span class="muted small">${p.done + 1}/${p.all}</span>
+        </header>`;
+  }
+
   function show() {
     clearTimeout(advanceId);
+    if (refill && queue.length < 3) {
+      const exclude = new Set([...recent, ...queue.map(it => it.key)]);
+      queue.push(...refill(exclude));
+    }
     if (!queue.length) return finish();
     current = queue.shift();
     options = buildOptions(current, mod);
@@ -46,14 +69,9 @@ export function runQuiz(root, { mod, mode, items, onDone }) {
     const deck = deckById.get(card.deck);
     const prompt = dir === 'f' ? deck?.prompt || FORWARD_PROMPTS[card.category] || FORWARD_PROMPTS.word
       : REVERSE_PROMPTS[card.category] || 'Welcher Ausdruck passt zu dieser Bedeutung?';
-    const p = progress();
     root.innerHTML = `
       <div class="quiz">
-        <header class="quiz-top">
-          <button class="icon-btn" data-act="quit" aria-label="Beenden">✕</button>
-          <div class="bar"><div style="width:${Math.round(p.done / Math.max(1, p.all) * 100)}%"></div></div>
-          <span class="muted small">${p.done + 1}/${p.all}</span>
-        </header>
+        ${topBar()}
         ${timerSec ? '<div class="timer"><div></div></div>' : ''}
         <section class="prompt">
           <span class="tag tag-${esc(card.category)}">${esc(CATEGORY_LABELS[card.category] || card.category)}${dir === 'r' ? ' · umgekehrt' : ''}</span>
@@ -90,6 +108,7 @@ export function runQuiz(root, { mod, mode, items, onDone }) {
     else stats.mistakes.set(current.key, { item: current, chosen });
     const day = dayStats(mod.id);
     day.answered++;
+    day.ms = (day.ms || 0) + Math.min(ms, 60000);
     if (ok) day.correct++;
     if (!ok && chosen) recordConfusion(current.key, chosen);
 
@@ -142,27 +161,33 @@ export function runQuiz(root, { mod, mode, items, onDone }) {
     if (!pending || pending.committed) return;
     pending.committed = true;
     const { ok, guessed, ms } = pending;
-    if (mode === 'learn') {
-      const g = !ok || guessed ? 1 : ms > slowMs ? 2 : 3;
-      const res = grade(current.key, g);
-      if (res.wasNew && current.dir === 'f') dayStats(mod.id).new++;
-      // Sitzt die Hinrichtung, kommt die Rückrichtung noch in derselben Einheit.
-      if (res.graduated && current.dir === 'f' && state.settings.reverse) {
-        const key = `${current.card.id}|r`;
-        if (!state.items[key] && !queue.some(it => it.key === key)) {
-          queue.splice(Math.min(queue.length, 4 + Math.floor(Math.random() * 4)), 0,
-            { key, card: current.card, dir: 'r' });
-        }
-      }
-      if (res.requeue) requeue();
-    } else if (mode === 'weak') {
-      if (!ok || guessed) {
-        grade(current.key, 1);
-        requeue();
-      }
-    } else if (mode === 'exam' && !ok) {
-      grade(current.key, 1);
+    recent.push(current.key);
+    if (recent.length > RECENT) recent.shift();
+    if (mode === 'exam') {
+      if (!ok) grade(current.key, 1);
+      save();
+      return;
     }
+    // Wiederholtes Richtig-Antworten am selben Tag zählt nicht als weiterer Lernfortschritt,
+    // sonst würde stures Wiederholen die Abstände künstlich verlängern.
+    const m = state.items[current.key];
+    const reviewedToday = m?.state === 'review' && m.last >= startOfDay();
+    if (ok && !guessed && reviewedToday) {
+      save();
+      return;
+    }
+    const g = !ok || guessed ? 1 : ms > slowMs ? 2 : 3;
+    const res = grade(current.key, g);
+    if (res.wasNew && current.dir === 'f') dayStats(mod.id).new++;
+    // Sitzt die Hinrichtung, kommt die Rückrichtung noch in derselben Einheit.
+    if (res.graduated && current.dir === 'f' && state.settings.reverse) {
+      const key = `${current.card.id}|r`;
+      if (!state.items[key] && !queue.some(it => it.key === key)) {
+        queue.splice(Math.min(queue.length, 4 + Math.floor(Math.random() * 4)), 0,
+          { key, card: current.card, dir: 'r' });
+      }
+    }
+    if (res.requeue) requeue();
     save();
   }
 

@@ -32,22 +32,31 @@ export function itemsOf(mod) {
   return items;
 }
 
-const RANK = { new: 0, learning: 1, known: 2, mastered: 3 };
+// Fünf Lager nach Gedächtnisstabilität (Tage, bis die Erinnerung auf 90 % fällt). 0 = noch neu.
+export const LAGER = [
+  { n: 1, name: 'Kritisch', hint: 'gerade gelernt oder vergessen' },
+  { n: 2, name: 'Unsicher', hint: 'sitzt ein paar Tage' },
+  { n: 3, name: 'Solide', hint: 'sitzt 1–2 Wochen' },
+  { n: 4, name: 'Sicher', hint: 'sitzt mehrere Wochen' },
+  { n: 5, name: 'Perfekt', hint: 'sitzt über einen Monat' },
+];
 
-// Eine Karte gilt erst als gelernt, wenn beide Richtungen sitzen.
-export function cardStatus(card) {
-  const f = status(`${card.id}|f`);
-  if (!state.settings.reverse) return f;
-  const r = status(`${card.id}|r`);
-  if (f === 'new' && r === 'new') return 'new';
-  return RANK[f] <= RANK[r] ? (f === 'new' ? 'learning' : f) : (r === 'new' ? 'learning' : r);
+export function itemLager(key) {
+  const m = state.items[key];
+  if (!m || m.state === 'new') return 0;
+  if (m.state !== 'review' || m.s < 2) return 1;
+  if (m.s < 6) return 2;
+  if (m.s < 15) return 3;
+  if (m.s < 35) return 4;
+  return 5;
 }
 
-export function status(key) {
-  const m = state.items[key];
-  if (!m || m.state === 'new') return 'new';
-  if (m.state !== 'review') return 'learning';
-  return m.s >= 21 ? 'mastered' : 'known';
+// Eine Karte steht im Lager ihrer schwächeren Richtung – sie gilt erst als gut, wenn beide sitzen.
+export function cardLager(card) {
+  const f = itemLager(`${card.id}|f`);
+  if (!state.settings.reverse || f === 0) return f;
+  const r = itemLager(`${card.id}|r`);
+  return r === 0 ? 1 : Math.min(f, r);
 }
 
 export function daysUntilExam(now = Date.now()) {
@@ -121,10 +130,10 @@ function newCandidates(mod) {
 export function overview(mod, now = Date.now()) {
   const end = endOfDay(now);
   let due = 0, tomorrow = 0, week = 0;
-  const counts = { new: 0, learning: 0, known: 0, mastered: 0 };
+  const lager = [0, 0, 0, 0, 0, 0];
   for (const it of itemsOf(mod)) {
     const m = state.items[it.key];
-    if (it.dir === 'f') counts[cardStatus(it.card)]++;
+    if (it.dir === 'f') lager[cardLager(it.card)]++;
     if (!m || m.state === 'new') continue;
     if (m.due <= end) due++;
     else if (m.due <= end + DAY) tomorrow++;
@@ -133,7 +142,9 @@ export function overview(mod, now = Date.now()) {
   const { forward, reverse } = newCandidates(mod);
   const newLeft = Math.max(0, state.settings.newPerDay - dayStats(mod.id).new);
   const newToday = Math.min(newLeft, forward.length) + reverse.length;
-  return { due, tomorrow, week, newToday, counts, total: counts.new + counts.learning + counts.known + counts.mastered };
+  const today = startOfDay(now);
+  const reviewedToday = itemsOf(mod).filter(it => state.items[it.key]?.last >= today).length;
+  return { due, tomorrow, week, newToday, lager, reviewedToday, total: lager.reduce((a, b) => a + b, 0) };
 }
 
 // Neue Karten abwechselnd aus allen Kartensätzen, damit Kategorien gemischt werden.
@@ -170,6 +181,44 @@ export function buildLearnSession(mod, limit = 60, now = Date.now()) {
   });
   while (ni < news.length) queue.push(news[ni++]);
   return queue.slice(0, limit);
+}
+
+// Alle heute schon geübten Karten noch einmal – beliebig oft.
+export function buildRepeatSession(mod, now = Date.now()) {
+  const today = startOfDay(now);
+  return shuffle(itemsOf(mod).filter(it => state.items[it.key]?.last >= today));
+}
+
+export function buildLagerSession(mod, n) {
+  return shuffle(itemsOf(mod).filter(it => itemLager(it.key) === n));
+}
+
+// Endlos-Modus: fällige Karten zuerst, dann abwechselnd die am ehesten vergessenen und neue Karten.
+export function endlessBatch(mod, exclude, size = 10, now = Date.now()) {
+  const end = endOfDay(now);
+  const items = itemsOf(mod).filter(it => !exclude.has(it.key));
+  const due = [], review = [];
+  for (const it of items) {
+    const m = state.items[it.key];
+    if (!m || m.state === 'new') continue;
+    if (m.due <= end) due.push(it);
+    else review.push({ it, r: retrievability(Math.max(0, (now - m.last) / DAY), m.s) });
+  }
+  due.sort((a, b) => state.items[a.key].due - state.items[b.key].due);
+  review.sort((a, b) => a.r - b.r);
+  const { forward, reverse } = newCandidates(mod);
+  const fresh = [...shuffle(reverse), ...roundRobin(forward)].filter(it => !exclude.has(it.key));
+
+  const batch = due.slice(0, size);
+  let ri = 0, ni = 0;
+  while (batch.length < size && (ri < review.length || ni < fresh.length)) {
+    if (ri < review.length && review[ri].r < 0.97) batch.push(review[ri++].it);
+    if (batch.length < size && ri < review.length && review[ri].r < 0.97) batch.push(review[ri++].it);
+    if (batch.length < size && ni < fresh.length) batch.push(fresh[ni++]);
+    // Alles neu gelernt und gut im Gedächtnis: dann die am wenigsten sicheren Karten wiederholen.
+    if (ni >= fresh.length && ri < review.length && review[ri].r >= 0.97) batch.push(review[ri++].it);
+  }
+  return batch;
 }
 
 export function buildExamSession(mod, count) {
