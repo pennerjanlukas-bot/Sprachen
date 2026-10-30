@@ -11,7 +11,8 @@ const DEFAULTS = {
     reverse: true,
     retention: 0.9,
     examDate: '',
-    autoAdvance: true,
+    // Neuer Name, damit die frühere Voreinstellung (an) auf bestehenden Geräten nicht weiter gilt.
+    autoNext: false,
   },
   items: {},
   days: {},
@@ -31,6 +32,7 @@ function load() {
 }
 
 function merge(data) {
+  if (data.settings) delete data.settings.autoAdvance;
   return {
     ...structuredClone(DEFAULTS),
     ...data,

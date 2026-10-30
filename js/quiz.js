@@ -130,7 +130,7 @@ export function runQuiz(root, { mod, mode, items, refill, onDone }) {
       return;
     }
     renderFeedback(correctText);
-    if (ok && state.settings.autoAdvance) advanceId = setTimeout(next, 1400);
+    if (ok && state.settings.autoNext) advanceId = setTimeout(next, 2000);
   }
 
   function renderFeedback(correctText) {

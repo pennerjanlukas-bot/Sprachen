@@ -362,7 +362,7 @@ function renderSettings() {
           ${[0.85, 0.9, 0.93, 0.95].map(v => `<option value="${v}" ${s.retention === v ? 'selected' : ''}>${Math.round(v * 100)} %${v === 0.9 ? ' (empfohlen)' : v > 0.9 ? ' (mehr Wiederholungen)' : ' (weniger Wiederholungen)'}</option>`).join('')}
         </select></label>
         <label class="check"><input type="checkbox" name="reverse" ${s.reverse ? 'checked' : ''}> In beide Richtungen abfragen (auch Bedeutung → Begriff)</label>
-        <label class="check"><input type="checkbox" name="autoAdvance" ${s.autoAdvance ? 'checked' : ''}> Bei richtiger Antwort automatisch weiter</label>
+        <label class="check"><input type="checkbox" name="autoNext" ${s.autoNext ? 'checked' : ''}> Bei richtiger Antwort automatisch weiter (nach 2 Sek.)</label>
       </section>
       <section class="card form">
         <h3>Kartensätze</h3>

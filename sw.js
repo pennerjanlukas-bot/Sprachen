@@ -1,5 +1,5 @@
 // Offline-Unterstützung: App-Dateien werden zwischengespeichert, Daten zuerst aus dem Netz geladen.
-const CACHE = 'sprachtrainer-v5';
+const CACHE = 'sprachtrainer-v6';
 const SHELL = ['./', 'index.html', 'styles.css', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-180.png',
   'js/app.js', 'js/data.js', 'js/fsrs.js', 'js/quiz.js', 'js/srs.js', 'js/store.js', 'js/ui.js'];
 
